@@ -10,21 +10,28 @@ export type WebviewToHostMessage =
   | { type: 'scroll'; ratio: number }
   | { type: 'copy'; html: string }
   | { type: 'export' }
+  | { type: 'selectTheme' }
+  | { type: 'selectCodeTheme' }
   | { type: 'ready' };
 
 /** 从扩展派发到 webview 的消息类型 */
 export type HostToWebviewMessage =
   | { type: 'update'; html: string; title: string }
-  | { type: 'scroll'; ratio: number };
+  | { type: 'scroll'; ratio: number }
+  | { type: 'themeChanged'; themeName: string; codeThemeName: string };
 
 /**
  * 生成 webview 的初始 HTML 外壳
  * @param initialHtml 初始的文章 HTML（来自 wrapHtml 的完整文档）
  * @param cspSource webview 的 CSP 来源（用于允许加载本地图片资源）
+ * @param initialThemeName 初始文章主题名（用于按钮显示）
+ * @param initialCodeThemeName 初始代码主题名（用于按钮显示）
  */
 export function buildWebviewHtml(
   initialHtml: string,
   cspSource: string,
+  initialThemeName: string,
+  initialCodeThemeName: string,
 ): { html: string; nonce: string } {
   // 使用随机 nonce 防止注入，CSP 仅允许带该 nonce 的 inline 脚本
   const nonce = getNonce();
@@ -45,7 +52,7 @@ export function buildWebviewHtml(
     html, body { height: 100%; margin: 0; padding: 0; background: var(--vscode-editor-background); }
     body { display: flex; flex-direction: column; }
     .toolbar {
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 6px;
       padding: 6px 12px;
       border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
       background: var(--vscode-panel-background);
@@ -68,12 +75,24 @@ export function buildWebviewHtml(
       border-radius: 2px;
       font-size: 12px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
     }
     .toolbar button.secondary {
       background: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
     }
     .toolbar button:hover { filter: brightness(1.08); }
+    .toolbar .caret {
+      display: inline-block;
+      width: 0; height: 0;
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-top: 4px solid currentColor;
+      opacity: 0.7;
+    }
     .frame-wrap { flex: 1 1 auto; min-height: 0; }
     iframe#article {
       width: 100%; height: 100%; border: 0; display: block;
@@ -84,6 +103,12 @@ export function buildWebviewHtml(
 <body>
   <div class="toolbar">
     <span class="title" id="title">文染预览</span>
+    <button id="selectTheme" class="secondary" type="button" title="切换文章主题">
+      <span>主题：</span><span id="themeName">${escapeHtml(initialThemeName)}</span><span class="caret"></span>
+    </button>
+    <button id="selectCodeTheme" class="secondary" type="button" title="切换代码主题">
+      <span>代码：</span><span id="codeThemeName">${escapeHtml(initialCodeThemeName)}</span><span class="caret"></span>
+    </button>
     <button id="copy" type="button">复制到公众号</button>
     <button id="export" class="secondary" type="button">导出 HTML</button>
   </div>
@@ -96,6 +121,8 @@ export function buildWebviewHtml(
     const vscode = acquireVsCodeApi();
     const frame = document.getElementById('article');
     const titleEl = document.getElementById('title');
+    const themeNameEl = document.getElementById('themeName');
+    const codeThemeNameEl = document.getElementById('codeThemeName');
     let suppressScroll = false;
 
     // 设置 iframe 内容，并在 onload 后绑定滚动监听
@@ -137,10 +164,20 @@ export function buildWebviewHtml(
         suppressScroll = true;
         win.scrollTo({ top: max * message.ratio });
         requestAnimationFrame(() => { suppressScroll = false; });
+      } else if (message.type === 'themeChanged') {
+        // 主题切换后同步按钮显示的当前主题名
+        if (message.themeName) themeNameEl.textContent = message.themeName;
+        if (message.codeThemeName) codeThemeNameEl.textContent = message.codeThemeName;
       }
     });
 
-    // 工具条按钮：复制到公众号 / 导出 HTML
+    // 工具条按钮：切换文章主题 / 切换代码主题 / 复制到公众号 / 导出 HTML
+    document.getElementById('selectTheme').addEventListener('click', () => {
+      vscode.postMessage({ type: 'selectTheme' });
+    });
+    document.getElementById('selectCodeTheme').addEventListener('click', () => {
+      vscode.postMessage({ type: 'selectCodeTheme' });
+    });
     document.getElementById('copy').addEventListener('click', async () => {
       const doc = frame.contentDocument;
       if (!doc) return;
@@ -158,6 +195,13 @@ export function buildWebviewHtml(
 </body>
 </html>`,
   };
+}
+
+/** 转义 HTML 特殊字符，防止主题名中包含 < > & 等导致注入 */
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (character) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]!
+  ));
 }
 
 /** 生成随机 nonce 字符串，用于 CSP 与 script 标签配对 */

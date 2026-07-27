@@ -6,8 +6,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { renderMarkdown, wrapHtml } from './markdownRenderer';
-import { findTheme } from './themes';
-import { findCodeTheme } from './codeThemes';
+import { articleThemes, findTheme } from './themes';
+import { codeThemes, findCodeTheme } from './codeThemes';
 import { buildWebviewHtml, type WebviewToHostMessage } from './webviewContent';
 import type { ArticleTheme, CodeTheme } from './types';
 
@@ -150,7 +150,12 @@ export class PreviewManager implements vscode.Disposable {
     const fullHtml = wrapHtml(rendered, title, entry.theme);
     entry.lastRenderedHtml = rendered;
     entry.lastFullHtml = fullHtml;
-    panel.webview.html = buildWebviewHtml(fullHtml, panel.webview.cspSource).html;
+    panel.webview.html = buildWebviewHtml(
+      fullHtml,
+      panel.webview.cspSource,
+      entry.theme.name,
+      entry.codeTheme.name,
+    ).html;
 
     // 接收 webview 主动发来的消息（滚动、复制、导出、就绪）
     panel.webview.onDidReceiveMessage(
@@ -185,6 +190,12 @@ export class PreviewManager implements vscode.Disposable {
     if (!entry) return;
     entry.theme = theme;
     this.scheduleUpdate(entry, document, 0);
+    // 同步工具条按钮显示的当前主题名
+    entry.panel.webview.postMessage({
+      type: 'themeChanged',
+      themeName: entry.theme.name,
+      codeThemeName: entry.codeTheme.name,
+    });
   }
 
   /** 切换代码主题：刷新指定文档的预览（如未打开则跳过） */
@@ -194,6 +205,11 @@ export class PreviewManager implements vscode.Disposable {
     if (!entry) return;
     entry.codeTheme = codeTheme;
     this.scheduleUpdate(entry, document, 0);
+    entry.panel.webview.postMessage({
+      type: 'themeChanged',
+      themeName: entry.theme.name,
+      codeThemeName: entry.codeTheme.name,
+    });
   }
 
   /** 复制指定文档当前预览内容（article innerHTML）到剪贴板，适配公众号编辑器 */
@@ -284,7 +300,72 @@ export class PreviewManager implements vscode.Disposable {
       case 'export':
         void this.exportHtml(this.getDocumentForUri(uri)!);
         break;
+      case 'selectTheme':
+        // 工具条“文章主题”按钮：弹出 QuickPick 并应用到当前预览
+        void this.pickTheme(uri);
+        break;
+      case 'selectCodeTheme':
+        // 工具条“代码主题”按钮：弹出 QuickPick 并应用到当前预览
+        void this.pickCodeTheme(uri);
+        break;
     }
+  }
+
+  /**
+   * 弹出文章主题选择器，选中后应用到指定预览并更新默认配置
+   */
+  private async pickTheme(uri: string): Promise<void> {
+    const entry = this.panels.get(uri);
+    if (!entry) return;
+    const items = articleThemes.map((theme) => ({
+      label: theme.name,
+      description: theme.description,
+      detail: theme.swatches.join('  '),
+      picked: theme.id === entry.theme.id,
+      theme,
+    }));
+    const picked = await vscode.window.showQuickPick(items, {
+      title: '选择文章主题',
+      placeHolder: '当前主题将立即应用到预览与导出',
+    });
+    if (!picked) return;
+    const document = this.getDocumentForUri(uri);
+    if (!document) return;
+    this.setTheme(document, picked.theme);
+    // 同时更新默认主题，使后续打开的文档也使用该主题
+    await vscode.workspace.getConfiguration('wenrender').update(
+      'defaultTheme',
+      picked.theme.id,
+      vscode.ConfigurationTarget.Global,
+    );
+  }
+
+  /**
+   * 弹出代码主题选择器，选中后应用到指定预览并更新默认配置
+   */
+  private async pickCodeTheme(uri: string): Promise<void> {
+    const entry = this.panels.get(uri);
+    if (!entry) return;
+    const items = codeThemes.map((theme) => ({
+      label: theme.name,
+      description: theme.description,
+      detail: theme.swatches.join('  '),
+      picked: theme.id === entry.codeTheme.id,
+      theme,
+    }));
+    const picked = await vscode.window.showQuickPick(items, {
+      title: '选择代码主题',
+      placeHolder: '使用 Highlight.js 官方配色',
+    });
+    if (!picked) return;
+    const document = this.getDocumentForUri(uri);
+    if (!document) return;
+    this.setCodeTheme(document, picked.theme);
+    await vscode.workspace.getConfiguration('wenrender').update(
+      'defaultCodeTheme',
+      picked.theme.id,
+      vscode.ConfigurationTarget.Global,
+    );
   }
 
   /**
