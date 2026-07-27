@@ -1,10 +1,19 @@
 {
   "name": "wenrender-vscode",
   "displayName": "文染 WenRender",
-  "description": "面向微信公众号写作的 Markdown 分栏预览扩展，参考 WenRender 桌面版移植。",
+  "description": "面向微信公众号写作的 Markdown 分栏预览扩展，根据 WenRender 桌面版移植的插件版本。",
   "version": "0.1.0",
-  "publisher": "wenrender",
+  "publisher": "cloris",
   "license": "AGPL-3.0",
+  "icon": "app-logo-radius.webp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1595901624/wenrender-vscode.git"
+  },
+  "homepage": "https://github.com/1595901624/wenrender-vscode",
+  "bugs": {
+    "url": "https://github.com/1595901624/wenrender-vscode/issues"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
