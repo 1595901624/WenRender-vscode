@@ -84,7 +84,7 @@
         },
         "wenrender.defaultCodeTheme": {
           "type": "string",
-          "default": "github-light",
+          "default": "atom-one-dark",
           "description": "默认代码主题 ID"
         },
         "wenrender.lineHeight": {

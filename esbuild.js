@@ -18,6 +18,9 @@ const options = {
   minify: production,
   outfile: 'dist/extension.js',
   logLevel: 'info',
+  // 将 highlight.js 官方主题 CSS 作为纯文本导入，运行时解析提取 token 颜色
+  // 对应原仓库 Vite 的 ?inline 写法
+  loader: { '.css': 'text' },
 };
 
 async function main() {
