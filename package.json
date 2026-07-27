@@ -1,0 +1,120 @@
+{
+  "name": "wenrender-vscode",
+  "displayName": "文染 WenRender",
+  "description": "面向微信公众号写作的 Markdown 分栏预览扩展，参考 WenRender 桌面版移植。",
+  "version": "0.1.0",
+  "publisher": "wenrender",
+  "license": "AGPL-3.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "markdown",
+    "wechat",
+    "preview",
+    "公众号",
+    "微信"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onCommand:wenrender.openPreview",
+    "onCommand:wenrender.openPreviewToSide"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "wenrender.openPreview",
+        "title": "文染：打开预览",
+        "category": "WenRender"
+      },
+      {
+        "command": "wenrender.openPreviewToSide",
+        "title": "文染：分栏打开预览",
+        "category": "WenRender"
+      },
+      {
+        "command": "wenrender.selectTheme",
+        "title": "文染：选择文章主题",
+        "category": "WenRender"
+      },
+      {
+        "command": "wenrender.selectCodeTheme",
+        "title": "文染：选择代码主题",
+        "category": "WenRender"
+      },
+      {
+        "command": "wenrender.copyToWechat",
+        "title": "文染：复制到公众号",
+        "category": "WenRender"
+      },
+      {
+        "command": "wenrender.exportHtml",
+        "title": "文染：导出 HTML",
+        "category": "WenRender"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "wenrender.openPreviewToSide",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "wenrender.openPreview",
+          "when": "resourceLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "文染 WenRender",
+      "properties": {
+        "wenrender.defaultTheme": {
+          "type": "string",
+          "default": "classic-green",
+          "description": "默认文章主题 ID"
+        },
+        "wenrender.defaultCodeTheme": {
+          "type": "string",
+          "default": "github-light",
+          "description": "默认代码主题 ID"
+        },
+        "wenrender.lineHeight": {
+          "type": "number",
+          "default": 1.75,
+          "description": "输出正文行高"
+        },
+        "wenrender.syncScroll": {
+          "type": "boolean",
+          "default": true,
+          "description": "编辑器与预览是否同步滚动"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "dev": "node esbuild.js --watch",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.6.2"
+  }
+}
