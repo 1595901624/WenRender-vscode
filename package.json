@@ -39,12 +39,20 @@
       {
         "command": "wenrender.openPreview",
         "title": "文染：打开预览",
-        "category": "WenRender"
+        "category": "WenRender",
+        "icon": {
+          "light": "media/wenrender-icon.svg",
+          "dark": "media/wenrender-icon-dark.svg"
+        }
       },
       {
         "command": "wenrender.openPreviewToSide",
         "title": "文染：分栏打开预览",
-        "category": "WenRender"
+        "category": "WenRender",
+        "icon": {
+          "light": "media/wenrender-icon.svg",
+          "dark": "media/wenrender-icon-dark.svg"
+        }
       },
       {
         "command": "wenrender.selectTheme",
